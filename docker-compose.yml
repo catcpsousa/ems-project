@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ems-postgres
+    environment:
+      POSTGRES_USER: ems_user
+      POSTGRES_PASSWORD: ems_password
+      POSTGRES_DB: ems_db
+    ports:
+      - "5432:5432"

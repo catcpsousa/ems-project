@@ -43,4 +43,14 @@ public class BookingService {
                 .build();
         return seatRepository.save(seat);
     }
+
+    public Seat getSeat(Long seatId){
+        return seatRepository.findById(seatId)
+            .orElseThrow(() -> new RuntimeException("Seat not found"));
+    }
+
+    public Seat getSeatByNumber(String seatNumber) {
+        return seatRepository.findBySeatNumber(seatNumber)
+            .orElseThrow(() -> new RuntimeException("Seat not found"));
+    }
 }

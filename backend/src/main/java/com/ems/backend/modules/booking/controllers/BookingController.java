@@ -39,7 +39,7 @@ public class BookingController {
 
     //auxiliar endpoint to create seats for testing
     @PostMapping("/seats")
-    public ResponseEntity<Seat> createSeat(@RequestParam("number") String seatNumber){
+    public ResponseEntity<Seat> createSeat(@RequestParam("number") String seatNumber) {
         return ResponseEntity.ok(bookingService.createSeat(seatNumber));
     }
 

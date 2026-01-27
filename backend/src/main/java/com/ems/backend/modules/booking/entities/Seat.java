@@ -1,9 +1,12 @@
 package com.ems.backend.modules.booking.entities;
 
 import com.ems.backend.modules.event.entities.Event;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "seats")
@@ -19,16 +22,28 @@ public class Seat {
     private Long id;
 
     @Column(nullable = false)
-    private String seatNumber; // e.g., "A-1", "B-2"
+    private String seatNumber;
 
     @Enumerated(EnumType.STRING)
-    private SeatStatus status; // AVAILABLE, RESERVED, OCCUPIED
+    @Column(nullable = false)
+    private SeatStatus status;
+
+    // Quem bloqueou o assento (username)
+    private String lockedBy;
+
+    // Quando expira o lock (null se não está locked)
+    private LocalDateTime lockExpiresAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
+    @JsonIgnore  // Evita erro de lazy loading na serialização
     private Event event;
 
-    // Versão para Optimistic Locking (opcional, mas bom ter como fallback)
     @Version
     private Long version;
+
+    // Método auxiliar para verificar se o lock expirou
+    public boolean isLockExpired() {
+        return lockExpiresAt != null && LocalDateTime.now().isAfter(lockExpiresAt);
+    }
 }

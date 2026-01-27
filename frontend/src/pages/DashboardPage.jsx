@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
+import { useSeatWebSocket } from "../hooks/useSeatWebSocket";
 
 const API_BASE = "/api/bookings";
 
@@ -8,11 +9,25 @@ function seatColor(status) {
   switch (status) {
     case "AVAILABLE":
       return "var(--seat-available)";
-    case "RESERVED":
-    case "OCCUPIED":
-      return "var(--seat-occupied)";
+    case "LOCKED":
+      return "var(--seat-locked)";
+    case "BOOKED":
+      return "var(--seat-booked)";
     default:
       return "var(--seat-unknown)";
+  }
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case "AVAILABLE":
+      return "Livre";
+    case "LOCKED":
+      return "Bloqueado";
+    case "BOOKED":
+      return "Reservado";
+    default:
+      return status;
   }
 }
 
@@ -22,13 +37,15 @@ export default function DashboardPage() {
   const [newSeatNumber, setNewSeatNumber] = useState("");
   const [status, setStatus] = useState("A carregar...");
   const [error, setError] = useState(null);
+  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const availableCount = useMemo(
     () => seats.filter((s) => s.status === "AVAILABLE").length,
     [seats]
   );
 
-  const fetchSeats = async () => {
+  const fetchSeats = useCallback(async () => {
     setError(null);
     try {
       const res = await apiFetch(`${API_BASE}/seats`);
@@ -40,11 +57,29 @@ export default function DashboardPage() {
       setStatus("Erro de conexão ❌");
       setError(String(e?.message ?? e));
     }
-  };
+  }, []);
+
+  // WebSocket handlers
+  const handleSeatUpdate = useCallback((update) => {
+    setSeats((prev) =>
+      prev.map((seat) =>
+        seat.id === update.seatId
+          ? { ...seat, status: update.status, lockedBy: update.lockedBy }
+          : seat
+      )
+    );
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    fetchSeats();
+  }, [fetchSeats]);
+
+  // Conectar WebSocket
+  useSeatWebSocket(handleSeatUpdate, handleRefresh);
 
   useEffect(() => {
     fetchSeats();
-  }, []);
+  }, [fetchSeats]);
 
   const handleCreateSeat = async (e) => {
     e.preventDefault();
@@ -65,9 +100,10 @@ export default function DashboardPage() {
     }
   };
 
-  const handleReserveSeat = async (seatId) => {
+  const handleLockSeat = async (seatId) => {
+    setActionLoading(true);
     try {
-      const response = await apiFetch(`${API_BASE}/seats/${seatId}/reserve`, {
+      const response = await apiFetch(`${API_BASE}/seats/${seatId}/lock`, {
         method: "POST",
       });
 
@@ -76,9 +112,70 @@ export default function DashboardPage() {
         throw new Error(msg);
       }
 
+      const seat = await response.json();
+      setSelectedSeat(seat);
       await fetchSeats();
     } catch (err) {
-      alert(err.message || "Erro ao reservar assento");
+      alert(err.message || "Erro ao bloquear assento");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedSeat) return;
+    setActionLoading(true);
+
+    try {
+      const response = await apiFetch(
+        `${API_BASE}/seats/${selectedSeat.id}/confirm`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        const msg = await response.text();
+        throw new Error(msg);
+      }
+
+      setSelectedSeat(null);
+      await fetchSeats();
+      alert("Reserva confirmada com sucesso!");
+    } catch (err) {
+      alert(err.message || "Erro ao confirmar reserva");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReleaseSeat = async () => {
+    if (!selectedSeat) return;
+    setActionLoading(true);
+
+    try {
+      const response = await apiFetch(
+        `${API_BASE}/seats/${selectedSeat.id}/release`,
+        { method: "POST" }
+      );
+
+      if (!response.ok) {
+        const msg = await response.text();
+        throw new Error(msg);
+      }
+
+      setSelectedSeat(null);
+      await fetchSeats();
+    } catch (err) {
+      alert(err.message || "Erro ao libertar assento");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSeatClick = (seat) => {
+    if (seat.status === "AVAILABLE") {
+      handleLockSeat(seat.id);
+    } else if (seat.status === "LOCKED" && seat.lockedBy === user?.username) {
+      setSelectedSeat(seat);
     }
   };
 
@@ -134,6 +231,34 @@ export default function DashboardPage() {
           </form>
         </section>
 
+        {selectedSeat && (
+          <section className="card confirmation-section">
+            <h2>Confirmar Reserva</h2>
+            <p>
+              Assento <strong>{selectedSeat.seatNumber}</strong> bloqueado.
+            </p>
+            <p className="timer-warning">
+              ⏱️ Tens 10 minutos para confirmar a reserva.
+            </p>
+            <div className="confirmation-actions">
+              <button
+                onClick={handleConfirmBooking}
+                className="btn-primary"
+                disabled={actionLoading}
+              >
+                {actionLoading ? "A processar..." : "Confirmar Reserva"}
+              </button>
+              <button
+                onClick={handleReleaseSeat}
+                className="btn-secondary"
+                disabled={actionLoading}
+              >
+                Cancelar
+              </button>
+            </div>
+          </section>
+        )}
+
         <section className="card seats-section">
           <div className="seats-header">
             <h2>Mapa de Assentos</h2>
@@ -158,9 +283,16 @@ export default function DashboardPage() {
             <span className="legend-item">
               <span
                 className="legend-color"
-                style={{ background: "var(--seat-occupied)" }}
+                style={{ background: "var(--seat-locked)" }}
               />
-              Ocupado/Reservado
+              Bloqueado
+            </span>
+            <span className="legend-item">
+              <span
+                className="legend-color"
+                style={{ background: "var(--seat-booked)" }}
+              />
+              Reservado
             </span>
           </div>
 
@@ -168,13 +300,18 @@ export default function DashboardPage() {
             {seats.map((seat) => (
               <button
                 key={seat.id ?? seat.seatNumber}
-                className={`seat ${seat.status === "AVAILABLE" ? "available" : "occupied"}`}
+                className={`seat ${seat.status.toLowerCase()} ${
+                  seat.lockedBy === user?.username ? "mine" : ""
+                }`}
                 style={{ "--seat-bg": seatColor(seat.status) }}
-                title={`${seat.seatNumber} — ${seat.status}`}
-                onClick={() =>
-                  seat.status === "AVAILABLE" && handleReserveSeat(seat.id)
+                title={`${seat.seatNumber} — ${statusLabel(seat.status)}${
+                  seat.lockedBy ? ` (${seat.lockedBy})` : ""
+                }`}
+                onClick={() => handleSeatClick(seat)}
+                disabled={
+                  seat.status === "BOOKED" ||
+                  (seat.status === "LOCKED" && seat.lockedBy !== user?.username)
                 }
-                disabled={seat.status !== "AVAILABLE"}
               >
                 {seat.seatNumber}
               </button>

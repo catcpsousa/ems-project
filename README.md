@@ -44,7 +44,7 @@ To ensure consistency in high-demand environments, the EMS implements:
 
 * [x] **Phase 2**: Database modeling and Docker configuration
 
-* [ ] **Phase 3**: Authentication & Authorization (JWT)
+* [x] **Phase 3**: Authentication & Authorization (JWT)
 
 * [ ] **Phase 4**: Core Event CRUD & Catalog
 

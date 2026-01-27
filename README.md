@@ -46,9 +46,9 @@ To ensure consistency in high-demand environments, the EMS implements:
 
 * [x] **Phase 3**: Authentication & Authorization (JWT)
 
-* [ ] **Phase 4**: Core Event CRUD & Catalog
+* [x] **Phase 4**: Core Event CRUD & Catalog
 
-* [ ] **Phase 5**: Real-time Seat Reservation System (WebSockets + Locking)
+* [x] **Phase 5**: Real-time Seat Reservation System (WebSockets + Locking)
 
 * [ ] **Phase 6**: Google Calendar API Integration
 

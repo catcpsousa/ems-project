@@ -24,6 +24,19 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY);
 }
 
+// Role checks
+export function isAdmin() {
+  return getUser()?.role === "ADMIN";
+}
+
+export function isOrganizer() {
+  return getUser()?.role === "ORGANIZER";
+}
+
+export function isParticipant() {
+  return getUser()?.role === "PARTICIPANT";
+}
+
 export async function login(username, password) {
   const res = await fetch(`${API_URL}/api/auth/login`, {
     method: "POST",
@@ -38,15 +51,19 @@ export async function login(username, password) {
 
   const data = await res.json();
   setToken(data.token);
-  setUser({ username });
-  return data.token;
+  setUser({
+    username: data.username,
+    role: data.role,
+    fullName: data.fullName,
+  });
+  return data;
 }
 
-export async function register(username, password) {
+export async function register({ username, password, email, fullName, phone, role }) {
   const res = await fetch(`${API_URL}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, email, fullName, phone, role }),
   });
 
   if (!res.ok) {

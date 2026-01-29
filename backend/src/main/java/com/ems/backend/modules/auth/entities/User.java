@@ -1,11 +1,13 @@
 package com.ems.backend.modules.auth.entities;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,10 +24,13 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "users")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class User implements UserDetails{
+public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,8 +41,24 @@ public class User implements UserDetails{
     @Column(nullable = false)
     private String password;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    private String fullName;
+
+    private String phone;
+
     @Enumerated(EnumType.STRING)
-    private Role role; //ADMIN, USER
+    @Column(nullable = false)
+    private Role role;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enabled = true;
+
+    @Column(updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -45,7 +66,7 @@ public class User implements UserDetails{
     }
 
     @Override
-    public String getUsername(){
+    public String getUsername() {
         return username;
     }
 
@@ -66,10 +87,21 @@ public class User implements UserDetails{
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
+
+    /**
+     * Roles do Sistema EMS:
+     * 
+     * ADMIN - Gestão global da plataforma (super admin)
+     * ORGANIZER - Cria e gere os seus próprios eventos
+     * PARTICIPANT - Procura eventos e reserva assentos
+     * SYSTEM - Processos automáticos internos (jobs, schedulers)
+     */
     public enum Role {
-        ADMIN,
-        USER
+        ADMIN,        // Administrador da plataforma
+        ORGANIZER,    // Organizador de eventos
+        PARTICIPANT,  // Participante (reserva assentos)
+        SYSTEM        // Processos automáticos (interno)
     }
 }

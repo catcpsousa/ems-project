@@ -31,10 +31,9 @@ function statusLabel(status) {
   }
 }
 
-export default function DashboardPage() {
+export default function ParticipantDashboard() {
   const { user, logout } = useAuth();
   const [seats, setSeats] = useState([]);
-  const [newSeatNumber, setNewSeatNumber] = useState("");
   const [status, setStatus] = useState("A carregar...");
   const [error, setError] = useState(null);
   const [selectedSeat, setSelectedSeat] = useState(null);
@@ -59,7 +58,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // WebSocket handlers
   const handleSeatUpdate = useCallback((update) => {
     setSeats((prev) =>
       prev.map((seat) =>
@@ -74,31 +72,11 @@ export default function DashboardPage() {
     fetchSeats();
   }, [fetchSeats]);
 
-  // Conectar WebSocket
   useSeatWebSocket(handleSeatUpdate, handleRefresh);
 
   useEffect(() => {
     fetchSeats();
   }, [fetchSeats]);
-
-  const handleCreateSeat = async (e) => {
-    e.preventDefault();
-    if (!newSeatNumber.trim()) return;
-
-    try {
-      const response = await apiFetch(
-        `${API_BASE}/seats?number=${encodeURIComponent(newSeatNumber.trim())}`,
-        { method: "POST" }
-      );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      setNewSeatNumber("");
-      await fetchSeats();
-    } catch {
-      alert("Erro ao criar assento");
-    }
-  };
 
   const handleLockSeat = async (seatId) => {
     setActionLoading(true);
@@ -106,12 +84,10 @@ export default function DashboardPage() {
       const response = await apiFetch(`${API_BASE}/seats/${seatId}/lock`, {
         method: "POST",
       });
-
       if (!response.ok) {
         const msg = await response.text();
         throw new Error(msg);
       }
-
       const seat = await response.json();
       setSelectedSeat(seat);
       await fetchSeats();
@@ -125,18 +101,15 @@ export default function DashboardPage() {
   const handleConfirmBooking = async () => {
     if (!selectedSeat) return;
     setActionLoading(true);
-
     try {
       const response = await apiFetch(
         `${API_BASE}/seats/${selectedSeat.id}/confirm`,
         { method: "POST" }
       );
-
       if (!response.ok) {
         const msg = await response.text();
         throw new Error(msg);
       }
-
       setSelectedSeat(null);
       await fetchSeats();
       alert("Reserva confirmada com sucesso!");
@@ -150,18 +123,15 @@ export default function DashboardPage() {
   const handleReleaseSeat = async () => {
     if (!selectedSeat) return;
     setActionLoading(true);
-
     try {
       const response = await apiFetch(
         `${API_BASE}/seats/${selectedSeat.id}/release`,
         { method: "POST" }
       );
-
       if (!response.ok) {
         const msg = await response.text();
         throw new Error(msg);
       }
-
       setSelectedSeat(null);
       await fetchSeats();
     } catch (err) {
@@ -188,12 +158,12 @@ export default function DashboardPage() {
             <span className="logo-text">EMS</span>
           </div>
           <span className="header-divider" />
-          <h1>Painel de Gestão</h1>
+          <h1>Reservar Lugares</h1>
         </div>
         <div className="header-right">
-          <span className="user-badge">
-            <span className="user-icon">👤</span>
-            {user?.username}
+          <span className="user-badge participant-badge">
+            <span className="user-icon">🎫</span>
+            {user?.fullName || user?.username}
           </span>
           <button onClick={logout} className="logout-btn">
             Sair
@@ -208,28 +178,6 @@ export default function DashboardPage() {
           </span>
           {error && <span className="status-detail">{error}</span>}
         </div>
-
-        <section className="card create-section">
-          <h2>Criar Novo Assento</h2>
-          <form onSubmit={handleCreateSeat} className="create-form">
-            <input
-              type="text"
-              placeholder="Ex: A-12, B-5"
-              value={newSeatNumber}
-              onChange={(e) => setNewSeatNumber(e.target.value)}
-            />
-            <button type="submit" className="btn-primary">
-              Criar
-            </button>
-            <button
-              type="button"
-              onClick={fetchSeats}
-              className="btn-secondary"
-            >
-              Atualizar
-            </button>
-          </form>
-        </section>
 
         {selectedSeat && (
           <section className="card confirmation-section">
@@ -274,24 +222,15 @@ export default function DashboardPage() {
 
           <div className="legend">
             <span className="legend-item">
-              <span
-                className="legend-color"
-                style={{ background: "var(--seat-available)" }}
-              />
+              <span className="legend-color" style={{ background: "var(--seat-available)" }} />
               Livre
             </span>
             <span className="legend-item">
-              <span
-                className="legend-color"
-                style={{ background: "var(--seat-locked)" }}
-              />
+              <span className="legend-color" style={{ background: "var(--seat-locked)" }} />
               Bloqueado
             </span>
             <span className="legend-item">
-              <span
-                className="legend-color"
-                style={{ background: "var(--seat-booked)" }}
-              />
+              <span className="legend-color" style={{ background: "var(--seat-booked)" }} />
               Reservado
             </span>
           </div>
@@ -319,7 +258,7 @@ export default function DashboardPage() {
           </div>
 
           {seats.length === 0 && (
-            <p className="empty-message">Nenhum assento encontrado.</p>
+            <p className="empty-message">Nenhum assento disponível.</p>
           )}
         </section>
       </main>

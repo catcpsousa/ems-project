@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { login } from "../services/auth";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,7 +9,10 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { updateUser } = useAuth();
+
+  const justRegistered = location.state?.registered;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -17,9 +20,27 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password);
-      updateUser({ username });
-      navigate("/dashboard");
+      const data = await login(username, password);
+      updateUser({
+        username: data.username,
+        role: data.role,
+        fullName: data.fullName,
+      });
+
+      // Redirect based on role
+      switch (data.role) {
+        case "ADMIN":
+          navigate("/admin");
+          break;
+        case "ORGANIZER":
+          navigate("/organizer");
+          break;
+        case "PARTICIPANT":
+          navigate("/participant");
+          break;
+        default:
+          navigate("/");
+      }
     } catch (err) {
       setError(err.message || "Erro ao fazer login");
     } finally {
@@ -36,10 +57,15 @@ export default function LoginPage() {
             <span className="logo-text">EMS</span>
           </div>
           <h1>Bem-vindo de volta</h1>
-          <p>Entra na tua conta para gerir eventos</p>
+          <p>Entra na tua conta para continuar</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
+          {justRegistered && (
+            <div className="auth-success">
+              Conta criada com sucesso! Faz login para continuar.
+            </div>
+          )}
           {error && <div className="auth-error">{error}</div>}
 
           <div className="input-group">

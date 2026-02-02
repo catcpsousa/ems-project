@@ -260,6 +260,17 @@ public class EventService {
     }
 
     /*
+        Gets all published events(public)
+    */
+    @Transactional(readOnly = true)
+    public List<EventResponse> getPublishedEvents() {
+        return eventRepository.findByStatus(EventStatus.PUBLISHED)
+            .stream()
+            .map(this::toResponse)
+            .collect(Collectors.toList());
+    }
+    
+    /*
       === Auxiliar methods ===
     */
     private Event getEventForOrganizer(Long eventId, String organizerUsername) {
@@ -288,8 +299,9 @@ public class EventService {
             .seatColumns(event.getSeatColumns())
             .ticketPrice(event.getTicketPrice())
             .status(event.getStatus())
-            .organizerName(event.getOrganizer().getFullName())
+            .organizerName(event.getOrganizer() != null ? event.getOrganizer().getFullName() : "N/A")
             .createdAt(event.getCreatedAt())
+            .updatedAt(event.getUpdatedAt())
             .build();
     }
 

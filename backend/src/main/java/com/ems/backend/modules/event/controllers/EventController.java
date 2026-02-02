@@ -115,4 +115,12 @@ public class EventController {
             @PathVariable Long eventId) {
         return ResponseEntity.ok(eventService.getEventSeats(eventId));
     }
+
+    /*
+        Gets all published events
+    */
+    @GetMapping
+    public ResponseEntity<List<EventResponse>> getPublishedEvents() {
+        return ResponseEntity.ok(eventService.getPublishedEvents());
+    }
 }

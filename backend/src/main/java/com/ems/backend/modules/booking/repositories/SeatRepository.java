@@ -23,27 +23,28 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     Optional<Seat> findBySeatNumber(String seatNumber);
 
-    // Find all seats for a specific event
     List<Seat> findByEventId(Long eventId);
 
-    // count seats by event and status
     @Query("SELECT COUNT(s) FROM Seat s WHERE s.event.id = :eventId AND s.status = :status")
     Long countByEventIdAndStatus(@Param("eventId") Long eventId, @Param("status") SeatStatus status);
 
-    // count total seats for an event
     Long countByEventId(Long eventId);
 
-    // Find seats with expired lock
     @Query("SELECT s FROM Seat s WHERE s.status = :status AND s.lockExpiresAt < :now")
     List<Seat> findExpiredLocks(@Param("status") SeatStatus status, @Param("now") LocalDateTime now);
 
-    // Release expired locks in batch
     @Modifying
     @Query("UPDATE Seat s SET s.status = 'AVAILABLE', s.lockedBy = null, s.lockExpiresAt = null " +
            "WHERE s.status = 'LOCKED' AND s.lockExpiresAt < :now")
     int releaseExpiredLocks(@Param("now") LocalDateTime now);
 
-    // Find participants (booked seats) of an event
     @Query("SELECT s FROM Seat s WHERE s.event.id = :eventId AND s.status = 'BOOKED'")
     List<Seat> findBookedSeatsByEventId(@Param("eventId") Long eventId);
+
+    // Novos métodos para o participante
+    @Query("SELECT s FROM Seat s WHERE s.lockedBy = :username AND s.status = 'BOOKED'")
+    List<Seat> findBookedSeatsByUsername(@Param("username") String username);
+
+    @Query("SELECT s FROM Seat s JOIN FETCH s.event WHERE s.lockedBy = :username AND s.status = 'BOOKED'")
+    List<Seat> findBookedSeatsWithEventByUsername(@Param("username") String username);
 }

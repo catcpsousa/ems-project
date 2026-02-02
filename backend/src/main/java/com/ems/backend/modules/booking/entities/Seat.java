@@ -39,6 +39,8 @@ public class Seat {
     @JsonIgnore  // Evita erro de lazy loading na serialização
     private Event event;
 
+    private LocalDateTime bookedAt;
+
     @Version
     private Long version;
 

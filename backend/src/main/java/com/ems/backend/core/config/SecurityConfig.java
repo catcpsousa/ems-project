@@ -28,10 +28,14 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
-                // ===== Públicos =====
+                // ===== PÚBLICOS =====
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers("/ws/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll() // Catálogo público
+                
+                // Catálogo público de eventos
+                .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/events/{id}/seats").permitAll()
 
                 // ===== ADMIN =====
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -39,16 +43,32 @@ public class SecurityConfig {
                 .requestMatchers("/api/system/**").hasAnyRole("ADMIN", "SYSTEM")
 
                 // ===== ORGANIZER =====
+                // Endpoints específicos do organizador (devem vir ANTES dos genéricos!)
+                .requestMatchers(HttpMethod.GET, "/api/events/my-events").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/events/dashboard-stats").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/events/{id}/stats").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/events/{id}/participants").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/events").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
-                .requestMatchers("/api/organizer/**").hasAnyRole("ORGANIZER", "ADMIN")
 
                 // ===== PARTICIPANT =====
+                // Reservas de lugares
                 .requestMatchers("/api/bookings/**").hasAnyRole("PARTICIPANT", "ORGANIZER", "ADMIN")
+                
+                // Dashboard do participante
+                .requestMatchers(HttpMethod.GET, "/api/participant/bookings").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/participant/bookings/*/ticket").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/participant/today").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/participant/notifications").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/participant/notifications/unread-count").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/participant/notifications/mark-read").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/participant/feedback").hasAnyRole("PARTICIPANT", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/participant/feedback").hasAnyRole("PARTICIPANT", "ADMIN")
                 .requestMatchers("/api/participant/**").hasAnyRole("PARTICIPANT", "ADMIN")
 
-                // ===== Autenticado (qualquer role) =====
+                // ===== AUTENTICADO (qualquer role) =====
                 .requestMatchers("/api/auth/me").authenticated()
 
                 // Qualquer outra requisição precisa de autenticação

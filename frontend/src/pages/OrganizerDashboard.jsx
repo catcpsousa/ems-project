@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
 import { useSeatWebSocket } from "../hooks/useSeatWebSocket";
 import "./OrganizerDashboard.css";
+import EventMap from '../components/EventMap';
 
 // Componente Stepper para criar evento
 function EventWizard({ onClose, onEventCreated }) {
@@ -774,7 +775,47 @@ export default function OrganizerDashboard() {
                   </div>
                 </div>
               )}
-
+              {/* ADICIONAR AQUI - Informações do Evento + Mapa */}
+              <div className="event-info-section" style={{ 
+                display: "grid", 
+                gridTemplateColumns: selectedEvent.location ? "1fr 1fr" : "1fr",
+                gap: "1.5rem",
+                marginBottom: "1.5rem"
+              }}>
+                <div className="event-info-details">
+                  <h3>📋 Informações do Evento</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+                    <p><strong>📅 Data:</strong> {selectedEvent.startTime 
+                      ? new Date(selectedEvent.startTime).toLocaleDateString("pt-PT", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })
+                      : "A definir"}</p>
+                    <p><strong>📍 Local:</strong> {selectedEvent.location || "Online"}</p>
+                    <p><strong>💰 Preço:</strong> {selectedEvent.ticketPrice > 0 
+                      ? `€${Number(selectedEvent.ticketPrice).toFixed(2)}` 
+                      : "Grátis"}</p>
+                    <p><strong>🏷️ Categoria:</strong> {selectedEvent.category}</p>
+                  </div>
+                </div>
+                
+                {/* Mapa - só aparece se tiver localização física */}
+                {selectedEvent.location && (
+                  <div className="event-map-section">
+                    <h3>🗺️ Localização</h3>
+                    <div style={{ marginTop: "1rem" }}>
+                      <EventMap 
+                        location={selectedEvent.location} 
+                        eventTitle={selectedEvent.title}
+                        height="200px"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="quick-actions">
                 <h3>⚡ Ações Rápidas</h3>
                 <div className="action-buttons">

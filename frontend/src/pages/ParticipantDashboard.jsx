@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
 import { useSeatWebSocket } from "../hooks/useSeatWebSocket";
 import "./ParticipantDashboard.css";
+import EventMap from '../components/EventMap';
 
 // Componente do Bilhete Digital
 function DigitalTicketModal({ ticket, onClose }) {
@@ -275,6 +276,17 @@ function SeatMapModal({ event, onClose, onBookingComplete }) {
           <span>📍 {event.location || "Online"}</span>
           <span>💰 {event.ticketPrice > 0 ? `€${Number(event.ticketPrice).toFixed(2)}` : "Grátis"}</span>
         </div>
+
+        {/* MAPA no Modal de Reserva */}
+        {event.location && (
+          <div style={{ margin: "1rem 0" }}>
+            <EventMap 
+              location={event.location} 
+              eventTitle={event.title}
+              height="180px"
+            />
+          </div>
+        )}
 
         {loading ? (
           <div className="loading-state">
@@ -677,6 +689,18 @@ export default function ParticipantDashboard() {
                           })}</span>
                           <span>📍 {event.location || "Online"}</span>
                         </div>
+                        
+                        {/* MAPA - Adicionar aqui */}
+                        {event.location && !event.onlineLink && (
+                          <div style={{ marginTop: "1rem" }}>
+                            <EventMap 
+                              location={event.location} 
+                              eventTitle={event.title}
+                              height="150px"
+                            />
+                          </div>
+                        )}
+                        
                         <div className="event-footer">
                           <span className="event-price">
                             {event.ticketPrice > 0 ? `€${Number(event.ticketPrice).toFixed(2)}` : "Grátis"}

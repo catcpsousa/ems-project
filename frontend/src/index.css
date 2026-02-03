@@ -1902,4 +1902,16 @@ body {
   font-size: 14px;
   text-align: center;
 }
+/* Leaflet Map Styles */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+}
 }

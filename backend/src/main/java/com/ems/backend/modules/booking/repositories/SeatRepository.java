@@ -47,4 +47,11 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     @Query("SELECT s FROM Seat s JOIN FETCH s.event WHERE s.lockedBy = :username AND s.status = 'BOOKED'")
     List<Seat> findBookedSeatsWithEventByUsername(@Param("username") String username);
+
+    // Admin queries - count bookings by a specific user (using lockedBy as the booker identifier)
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.lockedBy = :username AND s.status = 'BOOKED'")
+    Long countBookedByUsername(@Param("username") String username);
+
+    @Query("SELECT COUNT(s) FROM Seat s WHERE s.status = 'BOOKED' AND s.bookedAt > :after")
+    Long countBookedAfter(@Param("after") LocalDateTime after);
 }

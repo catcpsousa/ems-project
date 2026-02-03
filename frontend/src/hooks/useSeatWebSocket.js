@@ -6,7 +6,6 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
   const clientRef = useRef(null);
   const connectedRef = useRef(false);
   
-  // Refs para callbacks (evita re-renders)
   const callbacksRef = useRef({ onSeatUpdate, onRefresh });
   callbacksRef.current = { onSeatUpdate, onRefresh };
 
@@ -16,26 +15,25 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
 
     async function connect() {
       try {
-        // Import dinâmico para evitar problemas de SSR/bundling
         const { Client } = await import("@stomp/stompjs");
-        const SockJS = (await import("sockjs-client")).default;
 
         if (!mounted) return;
 
+        // Converter http(s) para ws(s)
+        const wsUrl = WS_URL.replace(/^http/, 'ws') + '/ws';
+
         client = new Client({
-          webSocketFactory: () => new SockJS(`${WS_URL}/ws`),
+          brokerURL: wsUrl,
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
           debug: (str) => {
-            // Descomente para debug:
             // console.log("[STOMP]", str);
           },
           onConnect: () => {
             console.log("✅ WebSocket connected");
             connectedRef.current = true;
 
-            // Subscrever atualizações de assentos
             client.subscribe("/topic/seats", (message) => {
               try {
                 const update = JSON.parse(message.body);
@@ -46,7 +44,6 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
               }
             });
 
-            // Subscrever refresh (quando locks expiram)
             client.subscribe("/topic/seats/refresh", (message) => {
               try {
                 const count = JSON.parse(message.body);
@@ -83,7 +80,6 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
 
     connect();
 
-    // Cleanup
     return () => {
       mounted = false;
       if (client?.active) {

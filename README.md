@@ -212,9 +212,10 @@ frontend/
 
 ---
 
-## 📄 License
+## 📄 About
 
-This project is licensed under the MIT License.
+This is a personal/academic project developed for learning purposes.
+All rights reserved © 2026 Catarina Sousa
 
 ---
 

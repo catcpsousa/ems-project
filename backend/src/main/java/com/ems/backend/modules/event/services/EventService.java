@@ -1,12 +1,13 @@
 package com.ems.backend.modules.event.services;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-
 import com.ems.backend.modules.auth.entities.User;
 import com.ems.backend.modules.auth.repositories.UserRepository;
 import com.ems.backend.modules.booking.entities.Seat;
@@ -20,6 +21,7 @@ import com.ems.backend.modules.event.dtos.ParticipantResponse;
 import com.ems.backend.modules.event.entities.Event;
 import com.ems.backend.modules.event.entities.EventStatus;
 import com.ems.backend.modules.event.repositories.EventRepository;
+import com.ems.backend.modules.notification.OrganizerNotificationService;
 
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,9 @@ public class EventService {
     private final EventRepository eventRepository;
     private final SeatRepository seatRepository;
     private final UserRepository userRepository;
+    private final OrganizerNotificationService notificationService;
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /*
         Creates a new event (draft)
@@ -126,6 +131,22 @@ public class EventService {
     @Transactional
     public EventResponse updateEvent(Long eventId, CreateEventRequest request, String organizerUsername) {
         Event event = getEventForOrganizer(eventId, organizerUsername);
+
+        // Check if the schedule changer
+        boolean isScheduleChanged = false;
+        LocalDateTime oldStartTime = event.getStartTime();
+        LocalDateTime oldEndTime = event.getEndTime();
+        LocalDateTime newStartTime = request.getStartTime();
+        LocalDateTime newEndTime = request.getEndTime();
+
+        if(newStartTime != null && !newStartTime.equals(oldStartTime)) {
+            isScheduleChanged = true;
+        }
+        if(newEndTime != null && !newEndTime.equals(oldEndTime)) {
+            isScheduleChanged = true;
+        }
+
+        // Apply updates
         if(request.getTitle() != null) event.setTitle(request.getTitle());
         if(request.getDescription() != null) event.setDescription(request.getDescription());
         if(request.getCategory() != null) event.setCategory(request.getCategory());
@@ -137,6 +158,19 @@ public class EventService {
         if(request.getTicketPrice() != null) event.setTicketPrice(request.getTicketPrice());
 
         Event saved = eventRepository.save(event);
+
+        // Notify participants if schedule changed
+        if(isScheduleChanged){
+            log.info("⏰ Schedule changed for event ID: {}. Notifying participants...", eventId);
+            notificationService.notifyScheduleChange(
+                eventId,
+                oldStartTime != null ? oldStartTime.format(DATE_TIME_FORMATTER) : null,
+                newStartTime != null ? newStartTime.format(DATE_TIME_FORMATTER) : null,
+                oldEndTime != null ? oldEndTime.format(DATE_TIME_FORMATTER) : null,
+                newEndTime != null ? newEndTime.format(DATE_TIME_FORMATTER) : null
+            );
+        }
+
         return toResponse(saved);
     }
 

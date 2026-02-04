@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import SockJS from "sockjs-client";
 
 const WS_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
@@ -19,11 +20,9 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
 
         if (!mounted) return;
 
-        // Converter http(s) para ws(s)
-        const wsUrl = WS_URL.replace(/^http/, 'ws') + '/ws';
-
         client = new Client({
-          brokerURL: wsUrl,
+          // Usar SockJS como factory de WebSocket
+          webSocketFactory: () => new SockJS(`${WS_URL}/ws`),
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
@@ -82,14 +81,9 @@ export function useSeatWebSocket(onSeatUpdate, onRefresh) {
 
     return () => {
       mounted = false;
-      if (client?.active) {
-        client.deactivate();
+      if (clientRef.current) {
+        clientRef.current.deactivate();
       }
     };
   }, []);
-
-  return {
-    client: clientRef.current,
-    isConnected: connectedRef.current,
-  };
 }

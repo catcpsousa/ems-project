@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 
-                // Catálogo público de eventos
+                // Catálogo público de eventos (apenas GET sem sub-paths específicos)
                 .requestMatchers(HttpMethod.GET, "/api/events").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/events/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/events/{id}/seats").permitAll()
@@ -48,8 +48,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/events/dashboard-stats").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/events/{id}/stats").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/events/{id}/participants").hasAnyRole("ORGANIZER", "ADMIN")
+                
+                // POST endpoints para eventos - ordem específica primeiro
+                .requestMatchers(HttpMethod.POST, "/api/events/{id}/message").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/events/{id}/publish").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/events/{id}/cancel").hasAnyRole("ORGANIZER", "ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/events/{id}").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/events").hasAnyRole("ORGANIZER", "ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/events/**").hasAnyRole("ORGANIZER", "ADMIN")
 

@@ -45,6 +45,9 @@ public class UserNotification {
     @Column(nullable = false)
     private String type; // e.g., "BOOKING_CONFIRMED", "EVENT_CANCELED", ETC
 
+    @Column(nullable = false)
+    private String title;
+    
     @Column(columnDefinition = "TEXT")
     private String message;
 

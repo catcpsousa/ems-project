@@ -431,6 +431,11 @@ export default function OrganizerDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState({ startTime: "", endTime: "" });
+  const [messageText, setMessageText] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   const handleSeatUpdate = useCallback((update) => {
     setNotifications((prev) => [
@@ -577,6 +582,72 @@ export default function OrganizerDashboard() {
     };
     const s = statusMap[status] || { label: status, class: "" };
     return <span className={`status-badge ${s.class}`}>{s.label}</span>;
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleData.startTime) {
+      alert("Por favor, indica a nova data/hora de início.");
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const payload = {
+        startTime: new Date(rescheduleData.startTime).toISOString(),
+        endTime: rescheduleData.endTime ? new Date(rescheduleData.endTime).toISOString() : null,
+      };
+      
+      const res = await apiFetch(`/api/events/${selectedEvent.id}`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedEvent(updated);
+        fetchDashboardData();
+        setShowRescheduleModal(false);
+        setRescheduleData({ startTime: "", endTime: "" });
+        alert("Horário atualizado com sucesso! Os participantes serão notificados.");
+      } else {
+        const error = await res.text();
+        alert("Erro ao atualizar horário: " + error);
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao atualizar horário.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim()) {
+      alert("Por favor, escreve uma mensagem.");
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const res = await apiFetch(`/api/events/${selectedEvent.id}/message`, {
+        method: "POST",
+        body: JSON.stringify({ message: messageText }),
+      });
+      
+      if (res.ok) {
+        setShowMessageModal(false);
+        setMessageText("");
+        alert("Mensagem enviada a todos os participantes!");
+      } else {
+        const error = await res.text();
+        alert("Erro ao enviar mensagem: " + error);
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro ao enviar mensagem.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -819,8 +890,26 @@ export default function OrganizerDashboard() {
               <div className="quick-actions">
                 <h3>⚡ Ações Rápidas</h3>
                 <div className="action-buttons">
-                  <button className="btn-action">📅 Alterar Horário</button>
-                  <button className="btn-action">📧 Enviar Mensagem</button>
+                  <button 
+                    className="btn-action" 
+                    onClick={() => {
+                      setRescheduleData({
+                        startTime: selectedEvent.startTime ? selectedEvent.startTime.slice(0, 16) : "",
+                        endTime: selectedEvent.endTime ? selectedEvent.endTime.slice(0, 16) : "",
+                      });
+                      setShowRescheduleModal(true);
+                    }}
+                  >
+                    📅 Alterar Horário
+                  </button>
+                  <button 
+                    className="btn-action" 
+                    onClick={() => setShowMessageModal(true)}
+                    disabled={participants.length === 0}
+                    title={participants.length === 0 ? "Sem participantes para notificar" : ""}
+                  >
+                    📧 Enviar Mensagem
+                  </button>
                   <button className="btn-action" onClick={exportParticipants}>
                     📥 Exportar Participantes
                   </button>
@@ -888,6 +977,96 @@ export default function OrganizerDashboard() {
           onClose={() => setShowWizard(false)}
           onEventCreated={fetchDashboardData}
         />
+      )}
+      {/* Modal Alterar Horário */}
+      {showRescheduleModal && (
+        <div className="wizard-overlay" onClick={(e) => e.target === e.currentTarget && setShowRescheduleModal(false)}>
+          <div className="wizard-modal" style={{ maxWidth: "450px" }}>
+            <div className="wizard-header">
+              <h2>📅 Alterar Horário</h2>
+              <button className="close-btn" onClick={() => setShowRescheduleModal(false)}>×</button>
+            </div>
+            <div className="wizard-content">
+              <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
+                Alterar o horário de <strong>{selectedEvent.title}</strong>
+              </p>
+              <div className="form-group">
+                <label>Nova Data/Hora de Início *</label>
+                <input
+                  type="datetime-local"
+                  value={rescheduleData.startTime}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, startTime: e.target.value })}
+                />
+              </div>
+              <div className="form-group" style={{ marginTop: "1rem" }}>
+                <label>Nova Data/Hora de Fim</label>
+                <input
+                  type="datetime-local"
+                  value={rescheduleData.endTime}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, endTime: e.target.value })}
+                />
+              </div>
+              <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "1rem" }}>
+                ⚠️ Os participantes serão notificados sobre a alteração.
+              </p>
+            </div>
+            <div className="wizard-footer">
+              <button className="btn-secondary" onClick={() => setShowRescheduleModal(false)}>
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleReschedule} disabled={actionLoading}>
+                {actionLoading ? "A guardar..." : "Confirmar Alteração"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Enviar Mensagem */}
+      {showMessageModal && (
+        <div className="wizard-overlay" onClick={(e) => e.target === e.currentTarget && setShowMessageModal(false)}>
+          <div className="wizard-modal" style={{ maxWidth: "500px" }}>
+            <div className="wizard-header">
+              <h2>📧 Enviar Mensagem</h2>
+              <button className="close-btn" onClick={() => setShowMessageModal(false)}>×</button>
+            </div>
+            <div className="wizard-content">
+              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
+                Enviar mensagem para todos os participantes de <strong>{selectedEvent.title}</strong>
+              </p>
+              <p style={{ 
+                background: "#f3f4f6", 
+                padding: "0.75rem", 
+                borderRadius: "8px", 
+                fontSize: "0.9rem",
+                marginBottom: "1.5rem"
+              }}>
+                👥 {participants.length} participante{participants.length !== 1 ? "s" : ""} será{participants.length !== 1 ? "ão" : ""} notificado{participants.length !== 1 ? "s" : ""}
+              </p>
+              <div className="form-group">
+                <label>Mensagem *</label>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Escreve aqui a tua mensagem para os participantes..."
+                  rows={5}
+                  style={{ resize: "vertical" }}
+                />
+              </div>
+              <p style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "1rem" }}>
+                💡 A mensagem será enviada como notificação push e email (se configurado).
+              </p>
+            </div>
+            <div className="wizard-footer">
+              <button className="btn-secondary" onClick={() => setShowMessageModal(false)}>
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleSendMessage} disabled={actionLoading || !messageText.trim()}>
+                {actionLoading ? "A enviar..." : "Enviar Mensagem"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

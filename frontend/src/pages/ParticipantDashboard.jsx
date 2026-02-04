@@ -554,6 +554,7 @@ export default function ParticipantDashboard() {
       case "EVENT_REMINDER": return "⏰";
       case "EVENT_UPDATE": return "📢";
       case "EVENT_CANCELLED": return "❌";
+      case "ORGANIZER_MESSAGE": return "💬"; // Organizer Message
       default: return "📬";
     }
   };
